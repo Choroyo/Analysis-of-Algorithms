@@ -1,13 +1,13 @@
 #include <iostream>
+#include <fstream>
 #include <vector>
+#include <string>
 #include <cstdlib>
 #include <ctime>
 
 using namespace std;
 
 long comparisons = 0; // Global variable for counting comparisons
-
-cout << "hello word";
 
 // Insertion Sort
 long insertSort(vector<int>& A) {
@@ -95,4 +95,108 @@ long mergeSort(vector<int>& A) {
     comparisons = 0;
     mergeSortRecursive(A, 0, A.size() - 1);
     return comparisons;
+}
+
+void ascend(vector<int>& A) {
+    for (int i = 0; i < A.size(); i++) A[i] = i + 1;
+}
+
+void descend(vector<int>& A) {
+    for (int i = 0; i < A.size(); i++) A[i] = A.size() - i;
+}
+
+void vee(vector<int>& A) {
+    int mid = A.size() / 2;
+    for (int i = 0; i < mid; i++) A[i] = A.size() - i * 2;
+    for (int i = mid; i < A.size(); i++) A[i] = 2 * (i - mid) + 1;
+}
+
+void zigzag(vector<int>& A) {
+    int left = 0, right = A.size() - 1;
+    int count = A.size();
+    bool turn = true;
+    for (int i = 0; i < A.size(); i++) {
+        if (turn) A[i] = count--;
+        else A[i] = A.size() - count + 1;
+        turn = !turn;
+    }
+}
+
+void randomData(vector<int>& A) {
+    srand(time(0));
+    for (int i = 0; i < A.size(); i++) A[i] = rand() % A.size();
+}
+
+// Sorting and data generation functions from previous sections...
+
+void parseRun(int N, char dataType, char sortType) {
+    vector<int> A(N);
+
+    // Generate the data according to dataType
+    if (dataType == 'A') {
+        ascend(A);
+    } else if (dataType == 'D') {
+        descend(A);
+    } else if (dataType == 'V') {
+        vee(A);
+    } else if (dataType == 'Z') {
+        zigzag(A);
+    } else if (dataType == 'R') {
+        randomData(A);
+    } else {
+        cerr << "Invalid data type: " << dataType << endl;
+        return;
+    }
+
+// Perform the sorting and count comparisons
+    long comparisons = 0;
+    if (sortType == 'I') {
+        comparisons = insertSort(A);
+    } else if (sortType == 'Q') {
+        comparisons = quickSort(A);
+    } else if (sortType == 'M') {
+        comparisons = mergeSort(A);
+    } else {
+        cerr << "Invalid sort type: " << sortType << endl;
+        return;
+    }
+
+    // Output the result
+    cout << N << " " << dataType << " " << sortType << " " << comparisons << endl;
+}
+
+
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        cerr << "Usage: " << argv[0] << " <controlfile.txt>" << endl;
+        return 1;
+    }
+
+    string controlFile = argv[1];
+    ifstream file(controlFile);
+    if (!file.is_open()) {
+        cerr << "Error opening control file: " << controlFile << endl;
+        return 1;
+    }
+
+    int numRuns;
+    file >> numRuns;
+
+    for (int i = 0; i < numRuns; ++i) {
+        int N;
+        char dataType, sortType;
+
+        file >> N >> dataType >> sortType;
+        if (file.fail()) {
+            cerr << "Error reading run specifications in control file." << endl;
+            break;
+        }
+
+        // Parse each run as per the specifications
+        parseRun(N, dataType, sortType);
+    }
+
+    file.close();
+    return 0;
 }
