@@ -4,13 +4,14 @@
 #include <string>
 #include <cstdlib>
 #include <ctime>
+#include <chrono>
 
 using namespace std;
 
-long comparisons = 0; // Global variable for counting comparisons
+long long comparisons = 0; // Global variable for counting comparisons
 
 // Insertion Sort
-long insertSort(vector<int>& A) {
+long long insertSort(vector<int>& A) {
     comparisons = 0;
     int N = A.size();
     for (int i = 1; i < N; i++) {
@@ -42,19 +43,37 @@ int partition(vector<int>& A, int low, int high) {
     return i + 1;
 }
 
-void quickSortRecursive(vector<int>& A, int low, int high) {
-    if (low < high) {
-        int pi = partition(A, low, high);
-        quickSortRecursive(A, low, pi - 1);
-        quickSortRecursive(A, pi + 1, high);
+void quickSortIterative(vector<int>& A, int low, int high) {
+    // Use a stack to store subarray indexes
+    vector<pair<int, int>> stack;
+    stack.push_back({low, high});
+
+    while (!stack.empty()) {
+        pair<int, int> range = stack.back();
+        stack.pop_back();
+        int l = range.first, h = range.second;
+
+        if (l < h) {
+            int pi = partition(A, l, h);
+
+            // Push smaller partition first to minimize stack usage
+            if (pi - l < h - pi) {
+                stack.push_back({pi + 1, h});
+                stack.push_back({l, pi - 1});
+            } else {
+                stack.push_back({l, pi - 1});
+                stack.push_back({pi + 1, h});
+            }
+        }
     }
 }
 
-long quickSort(vector<int>& A) {
+long long quickSort(vector<int>& A) {
     comparisons = 0;
-    quickSortRecursive(A, 0, A.size() - 1);
+    quickSortIterative(A, 0, A.size() - 1);
     return comparisons;
 }
+
 
 // Merge Sort
 void merge(vector<int>& A, int left, int mid, int right) {
@@ -91,40 +110,52 @@ void mergeSortRecursive(vector<int>& A, int left, int right) {
     }
 }
 
-long mergeSort(vector<int>& A) {
+long long mergeSort(vector<int>& A) {
     comparisons = 0;
     mergeSortRecursive(A, 0, A.size() - 1);
     return comparisons;
 }
 
 void ascend(vector<int>& A) {
-    for (int i = 0; i < A.size(); i++) A[i] = i + 1;
+    for (int i = 0; i < static_cast<int>(A.size()); i++) {
+        A[i] = i + 1;
+    }
 }
 
 void descend(vector<int>& A) {
-    for (int i = 0; i < A.size(); i++) A[i] = A.size() - i;
+    for (int i = 0; i < static_cast<int>(A.size()); i++) {
+        A[i] = A.size() - i;
+    }
 }
 
 void vee(vector<int>& A) {
     int mid = A.size() / 2;
     for (int i = 0; i < mid; i++) A[i] = A.size() - i * 2;
-    for (int i = mid; i < A.size(); i++) A[i] = 2 * (i - mid) + 1;
+    for (int i = mid; i < static_cast<int>(A.size()); i++){ 
+        A[i] = 2 * (i - mid) + 1;
+    }
 }
 
 void zigzag(vector<int>& A) {
-    int left = 0, right = A.size() - 1;
-    int count = A.size();
+    int left = 1;
+    int right = A.size();
     bool turn = true;
-    for (int i = 0; i < A.size(); i++) {
-        if (turn) A[i] = count--;
-        else A[i] = A.size() - count + 1;
+
+    for (int i = 0; i < static_cast<int>(A.size()); i++) {
+        if (turn) {
+           A[i] = right--; 
+        } else {
+            A[i] = left++;
+        }
         turn = !turn;
     }
 }
 
 void randomData(vector<int>& A) {
     srand(time(0));
-    for (int i = 0; i < A.size(); i++) A[i] = rand() % A.size();
+    for (int i = 0; i < static_cast<int>(A.size()); i++) {
+        A[i] = rand() % A.size();
+    }
 }
 
 // Sorting and data generation functions from previous sections...
@@ -148,8 +179,8 @@ void parseRun(int N, char dataType, char sortType) {
         return;
     }
 
-// Perform the sorting and count comparisons
-    long comparisons = 0;
+    // Perform the sorting and count comparisons
+    long long comparisons = 0;
     if (sortType == 'I') {
         comparisons = insertSort(A);
     } else if (sortType == 'Q') {
@@ -160,14 +191,15 @@ void parseRun(int N, char dataType, char sortType) {
         cerr << "Invalid sort type: " << sortType << endl;
         return;
     }
-
     // Output the result
-    cout << N << " " << dataType << " " << sortType << " " << comparisons << endl;
+    cout << N << " " << dataType << " " << sortType << " " << comparisons << endl << flush;
+
 }
 
 
 
 int main(int argc, char* argv[]) {
+    
     if (argc != 2) {
         cerr << "Usage: " << argv[0] << " <controlfile.txt>" << endl;
         return 1;
@@ -175,28 +207,51 @@ int main(int argc, char* argv[]) {
 
     string controlFile = argv[1];
     ifstream file(controlFile);
+    
     if (!file.is_open()) {
         cerr << "Error opening control file: " << controlFile << endl;
         return 1;
     }
 
     int numRuns;
-    file >> numRuns;
+    if(!(file >> numRuns) || numRuns <= 0) {
+        cerr << "Invalid or missing of runs in control file." << endl;
+        return 1;
+    }
 
     for (int i = 0; i < numRuns; ++i) {
         int N;
         char dataType, sortType;
 
-        file >> N >> dataType >> sortType;
-        if (file.fail()) {
-            cerr << "Error reading run specifications in control file." << endl;
-            break;
+        if (!(file >> N >> dataType >> sortType)){
+            cerr << "Error reading run specifications in control file." << (i + 2) << endl;
+            return 1;
+        }
+
+         if (N <= 0) { // Validate data size
+            cerr << "Invalid data size (N) on line " << (i + 2) << ". Expected positive integer." << endl;
+            return 1;
+        }
+
+        if (dataType != 'A' && dataType != 'D' && dataType != 'V' && dataType != 'Z' && dataType != 'R') {
+            cerr << "Invalid data type on line " << (i + 2) << ". Expected 'A', 'D', 'V', 'Z', or 'R'." << endl;
+            return 1;
+        }
+
+        if (sortType != 'M' && sortType != 'Q' && sortType != 'I') {
+            cerr << "Invalid sort type on line " << (i + 2) << ". Expected 'M', 'Q', or 'I'." << endl;
+            return 1;
         }
 
         // Parse each run as per the specifications
+        auto start = std::chrono::high_resolution_clock::now();
         parseRun(N, dataType, sortType);
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = end - start;
+        cout << "Run time: " << duration.count() << " seconds" << endl;
     }
-
+    
     file.close();
+
     return 0;
 }
