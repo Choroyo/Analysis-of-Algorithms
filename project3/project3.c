@@ -6,7 +6,7 @@
 // Declaración de funciones
 int recursive(int *rods, int n, int left, int right, int calls[]);
 int memoization(int *rods, int n, int left, int right, int **memo);
-int dynamic(int *rods, int n);
+int dynamic(int *rods, int n, int **dp);
 
 // Función principal
 int main(int argc, char *argv[]) {
@@ -26,6 +26,7 @@ int main(int argc, char *argv[]) {
         } else {
             printf("%d\n", calls[0]);
         }
+
     } else if (method == 'M' || method == 'm') {
         int **memo = (int **)malloc(n * sizeof(int *));
         for (int i = 0; i < n; i++) {
@@ -33,6 +34,7 @@ int main(int argc, char *argv[]) {
             for (int j = 0; j < n; j++) {
                 memo[i][j] = -1;
             }
+            memo[i][i] = 0;  // Set the diagonal elements (cost of welding a single rod) to 0
         }
         int result = memoization(rods, n, 0, n - 1, memo);
         if (method == 'M') {
@@ -46,10 +48,24 @@ int main(int argc, char *argv[]) {
             }
         }
     } else if (method == 'D' || method == 'd') {
+        // Initilize dp table 
+        int **dp = (int **)malloc(n * sizeof(int *));
+        for (int i = 0; i < n; i++) {
+            dp[i] = (int *)malloc(n * sizeof(int));
+        }
+
+        int result = dynamic(rods, n, dp);
+
         if (method == 'D') {
-            printf("%d\n", dynamic(rods, n));
+            printf("%d\n", result);
         } else {
             // Imprimir tabla dinámica
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    printf("%d ", dp[i][j]);
+                }
+                printf("\n");
+            }
         }
     }
 
@@ -111,23 +127,52 @@ int memoization(int *rods, int n, int left, int right, int **memo) {
     return min_cost;
 }
 
-// Implementación dinámica
-int dynamic(int *rods, int n) {
-    int dp[n][n];
-    memset(dp, -1, sizeof(dp));
+int dynamic(int *rods, int n, int **dp) {
+    
+    int prefix_sum[n];
+    prefix_sum[0] = rods[0];
+    for (int i = 1; i < n; i++) {
+        prefix_sum[i] = prefix_sum[i - 1] + rods[i];
+    }
+    
+    // Initialize dp table to -1 for all cells except the diagonal
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (i == j) {
+                dp[i][j] = 0;  // Cost of a single rod is 0
+            } else {
+                dp[i][j] = -1; // Default value for uncomputed cells
+            }
+        }
+    }
 
-    for (int len = 1; len <= n; len++) {
-        for (int i = 0; i <= n - len; i++) {
-            int j = i + len - 1;
-            if (i == j) dp[i][j] = 0;
-            else {
-                dp[i][j] = INT_MAX;
-                for (int k = i; k < j; k++) {
-                    int cost = rods[i] + rods[j] + dp[i][k] + dp[k + 1][j];
-                    if (cost < dp[i][j]) dp[i][j] = cost;
+    // Calculate the minimum cost for all subproblems (welding rods between i and j
+    for (int len = 2; len <= n; len++) {  // len is the subproblem size (start from 2 rods)
+        for (int i = 0; i <= n - len; i++) {  // i is the starting rod index
+            int j = i + len - 1;  // j is the ending rod index for the current subproblem
+            
+            dp[i][j] = INT_MAX;  // Initialize to a large number for comparison
+            // Calculate the sum of rods in the range [i,j]
+            int rod_sum = (i == 0) ? prefix_sum[j] : (prefix_sum[j] - prefix_sum[i - 1]);
+
+            for (int k = i; k < j; k++) {  // k is the point of division
+                // Cost is the sum of the two subproblems and the cost of welding the rods[i..k] and rods[k+1..j]
+                int cost = dp[i][k] + dp[k + 1][j];
+                int total_cost = cost + rod_sum;
+                if (total_cost < dp[i][j]) {
+                    dp[i][j] = total_cost;  // Store the minimum cost
                 }
             }
         }
     }
-    return dp[0][n - 1];
+    // Ensure uncomputed cells remain -1
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (j < i || dp[i][j] == INT_MAX) {
+                dp[i][j] = -1;
+            }
+        }
+    }
+
+    return dp[0][n - 1];  // The result for welding all rods from 0 to n-1
 }
